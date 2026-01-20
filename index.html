@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Graph Demo</title>
+  <style>
+    body, html {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+      display: flex;
+      flex-direction: row;
+    }
+    #graph {
+      width: 79vw;
+      height: 100%;
+    }
+    #json-input {
+        width: 20vw;
+        height: 99vh;
+        background-color: #222;
+        border-radius: 0 12px 12px 0;
+        border: none;
+        color: white;
+    }
+    #json-input:focus{
+        outline: none;
+        border: none;
+    }
+  </style>
+</head>
+<body>
+<textarea id="json-input"></textarea>
+<div id="graph"></div>
+
+<script src="https://unpkg.com/d3-force@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/force-graph"></script>
+<script>
+  const el = document.getElementById("json-input");
+
+  el.addEventListener("input", (e) => {
+    console.log("Is valid json:", isValidJSON(e.target.value));
+    if (isValidJSON(e.target.value)) {
+      json = JSON.parse(e.target.value);
+      nodes = []
+      for (const node of json.nodes) {
+        nodes.push({id: node.id.toString(), title: node.title.toString()})
+      }
+      links = []
+      const seen = new Set();
+
+      for (const node of json.nodes) {
+        if (!Array.isArray(node.neighbors)) continue;
+
+        for (const neighborId of node.neighbors) {
+          if (!neighborId) continue;
+
+          const key = [node.id, neighborId].sort().join("::");
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          links.push({
+            source: node.id.toString(),
+            target: neighborId.toString(),
+          });
+        }
+      }
+
+      updateGraph({nodes: nodes, links: links})
+    }
+  });
+
+  const elem = document.getElementById('graph');
+
+  // const data = {
+  //   nodes: [
+  //     { id: 'node1', group: 1 },
+  //     { id: 'node2', group: 1 },
+  //     { id: 'node3', group: 2 },
+  //     { id: 'node4', group: 2 },
+  //     { id: 'node5', group: 3 }
+  //   ],
+  //   links: [
+  //     { source: 'node1', target: 'node2' },
+  //     { source: 'node2', target: 'node3' },
+  //     { source: 'node3', target: 'node4' },
+  //     { source: 'node4', target: 'node1' },
+  //     { source: 'node4', target: 'node5' }
+  //   ]
+  // };
+
+  function updateGraph(data) {
+    const Graph = ForceGraph()(elem)
+        .graphData(data)
+        .nodeId('id')          // match your node field
+        .nodeLabel('title')
+        .nodeRelSize(6)
+        .backgroundColor('#111')
+        .linkSource('source')  // explicit, based on *your* link fields
+        .linkTarget('target')
+        .linkWidth(() => 2)    // make sure links are visible
+        .linkColor(() => '#aaa')
+        .minZoom(0.5)   // lowest zoom-out level
+        .maxZoom(4);    // highest zoom-in level
+    Graph.d3Force(
+      'radial',
+      d3.forceRadial(0, 0, 0).strength(0.1)  // tweak strength
+    );
+  }
+
+
+  function isValidJSON(str) {
+    if (typeof str !== "string") return false;
+
+    try {
+      const parsed = JSON.parse(str);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+</script>
+</body>
+</html>
